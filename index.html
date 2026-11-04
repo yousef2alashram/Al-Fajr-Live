@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شركة الفجر للصرافة والتحويلات - لوحة أسعار العملات</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gold: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        },
+                        darkCard: '#121826',
+                        darkBg: '#0b0f19',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font (Cairo) -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Cairo', sans-serif; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #374151; }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; color: black !important; }
+        }
+    </style>
+</head>
+<body class="bg-darkBg text-gray-100 min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-black">
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-5 left-5 z-50 flex flex-col gap-2 no-print"></div>
+
+    <!-- HEADER -->
+    <header class="no-print bg-darkCard border-b border-gray-800 p-4 shadow-xl sticky top-0 z-40 backdrop-blur-md bg-opacity-90">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-darkBg shadow-lg shadow-amber-500/20">
+                    <i class="fa-solid fa-landmark-dome text-2xl"></i>
+                </div>
+                <div>
+                    <h1 id="header-company-title" class="text-xl font-bold text-white tracking-wide">شركة الفجر للصرافة والتحويلات</h1>
+                    <p class="text-xs text-amber-400 font-medium flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        النظام المالي المباشر للعملات
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3 bg-gray-900/80 p-2 rounded-2xl border border-gray-800">
+                <!-- زر طلب التعديل (يفتح نافذة كلمة المرور) -->
+                <button onclick="requestAdminAccess()" id="admin-toggle-btn" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 transition-all text-sm font-semibold border border-gray-700">
+                    <i class="fa-solid fa-pen-to-square text-amber-400" id="admin-icon"></i>
+                    <span id="admin-toggle-text">وضع التعديل</span>
+                </button>
+
+                <button onclick="openModal()" id="add-currency-btn" class="hidden flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-all text-sm font-semibold shadow-lg shadow-emerald-600/30">
+                    <i class="fa-solid fa-plus"></i> إضافة عملة
+                </button>
+
+                <button onclick="toggleFullScreen()" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 transition-all text-sm" title="وضع العرض الشامل">
+                    <i class="fa-solid fa-expand"></i> <span class="hidden sm:inline">عرض شامل</span>
+                </button>
+
+                <button onclick="window.print()" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 transition-all text-sm" title="طباعة الأسعار">
+                    <i class="fa-solid fa-print"></i> <span class="hidden sm:inline">طباعة</span>
+                </button>
+
+                <button onclick="manualRefresh()" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-darkBg font-bold transition-all text-sm shadow-lg shadow-amber-500/20" title="تحديث الأسعار يدوياً">
+                    <i class="fa-solid fa-rotate-right" id="refresh-icon"></i> تحديث
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN DISPLAY -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 flex flex-col gap-6">
+        <section class="relative overflow-hidden bg-gradient-to-br from-darkCard via-gray-900 to-gray-950 border border-gray-800/80 rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-5 z-10 w-full md:w-auto">
+                <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-600 p-0.5 shadow-xl shadow-amber-500/20 flex-shrink-0">
+                    <div class="w-full h-full bg-darkBg rounded-[14px] flex items-center justify-center">
+                        <i class="fa-solid fa-vault text-3xl text-amber-400"></i>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-1 w-full">
+                    <span class="text-xs uppercase tracking-widest text-amber-400 font-bold bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/25 w-fit">شركة صرافة معتمدة</span>
+                    <div class="flex items-center gap-2 mt-1">
+                        <h2 id="display-company-name" class="text-2xl md:text-3xl font-black text-white tracking-wide">شركة الفجر للصرافة والتحويلات</h2>
+                        <button onclick="editCompanyName()" id="edit-name-btn" class="hidden text-gray-400 hover:text-amber-400 transition-colors p-1" title="تعديل اسم الشركة">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-400">أسعار الصرف المباشرة والمحدثة بدقة عالية للعملاء والتحويلات الخارجية.</p>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center md:items-end gap-2 z-10 bg-black/40 backdrop-blur-md px-6 py-4 rounded-2xl border border-gray-800/80 min-w-[260px]">
+                <div class="flex items-center gap-3 text-amber-400 font-mono text-2xl md:text-3xl font-black tracking-wider">
+                    <i class="fa-regular fa-clock text-xl"></i>
+                    <span id="live-clock">00:00:00</span>
+                </div>
+                <div class="flex items-center gap-2 text-gray-300 text-sm font-semibold">
+                    <i class="fa-regular fa-calendar-days text-amber-500"></i>
+                    <span id="live-date">--/--/----</span>
+                </div>
+                <div class="text-[11px] text-gray-500 mt-1 flex items-center gap-1.5 border-t border-gray-800/80 pt-2 w-full justify-between">
+                    <span>آخر تحديث للأسعار:</span>
+                    <span id="last-update-time" class="text-gray-300 font-mono font-medium">الآن</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SEARCH BAR -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-darkCard p-4 rounded-2xl border border-gray-800">
+            <div class="relative w-full sm:w-80">
+                <span class="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-gray-400">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input type="text" id="search-input" oninput="filterCurrencies()" placeholder="ابحث عن عملة أو رمز..." class="w-full pl-4 pr-10 py-2.5 bg-gray-900 border border-gray-700 rounded-xl text-gray-100 placeholder-gray-500 text-sm focus:outline-none focus:border-amber-500 transition-all">
+            </div>
+            <div class="flex items-center gap-3 text-xs text-gray-400 w-full sm:w-auto justify-end">
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-arrow-trend-up text-emerald-400"></i> ارتفاع</span>
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-arrow-trend-down text-rose-400"></i> انخفاض</span>
+                <span class="flex items-center gap-1.5"><i class="fa-solid fa-equals text-gray-400"></i> استقرار</span>
+            </div>
+        </div>
+
+        <!-- TABLE -->
+        <section class="bg-darkCard border border-gray-800 rounded-3xl overflow-hidden shadow-2xl">
+            <div class="overflow-x-auto">
+                <table class="w-full text-right border-collapse">
+                    <thead>
+                        <tr class="bg-gray-900/90 text-gray-400 text-xs uppercase tracking-wider border-b border-gray-800">
+                            <th class="py-4 px-6 font-bold">العملة</th>
+                            <th class="py-4 px-6 font-bold">الرمز</th>
+                            <th class="py-4 px-6 font-bold">سعر الشراء (مبيع)</th>
+                            <th class="py-4 px-6 font-bold">سعر المبيع (شراء)</th>
+                            <th class="py-4 px-6 font-bold">الاتجاه</th>
+                            <th class="py-4 px-6 font-bold text-center admin-col hidden">إدارة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="currencies-table-body" class="divide-y divide-gray-800/60 text-sm"></tbody>
+                </table>
+            </div>
+            <div id="empty-state" class="hidden flex-col items-center justify-center p-12 text-center">
+                <i class="fa-solid fa-coins text-5xl text-gray-600 mb-4"></i>
+                <h3 class="text-lg font-bold text-gray-300">لا توجد عملات مطابقة للبحث</h3>
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="text-center py-6 text-xs text-gray-500 border-t border-gray-800/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p>جميع الحقوق محفوظة &copy; <span id="footer-year">2026</span> <span id="footer-company-name">شركة الفجر للصرافة والتحويلات</span></p>
+            <div class="flex items-center gap-4">
+                <span class="flex items-center gap-1 text-amber-400"><i class="fa-solid fa-shield-halved"></i> أسعار رسمية ومضمونة</span>
+                <span>•</span>
+                <span>تحديث يدوي فوري</span>
+            </div>
+        </footer>
+    </main>
+
+    <!-- نافذة طلب كلمة المرور المنبثقة البسيطة -->
+    <div id="auth-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm hidden no-print">
+        <div class="bg-darkCard border border-gray-800 w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center">
+            <div class="w-12 h-12 bg-amber-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 text-amber-400 text-xl border border-amber-500/20">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h3 class="text-lg font-bold text-white mb-1">لوحة تحكم الأدمن</h3>
+            <p class="text-xs text-gray-400 mb-4">أدخل كلمة المرور (1234) للوصول إلى وضع التعديل:</p>
+            <input type="password" id="admin-pass-input" placeholder="••••" class="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-xl text-center text-white font-mono text-lg tracking-widest mb-4 focus:outline-none focus:border-amber-500">
+            <div class="flex gap-2">
+                <button onclick="closeAuthModal()" class="flex-1 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-semibold transition-all">إلغاء</button>
+                <button onclick="verifyAdminPassword()" class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-darkBg text-sm font-bold transition-all shadow-lg shadow-amber-500/20">دخول</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD / EDIT CURRENCY MODAL -->
+    <div id="currency-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm hidden no-print">
+        <div class="bg-darkCard border border-gray-800 w-full max-w-md rounded-3xl p-6 shadow-2xl transform transition-all scale-95 opacity-0" id="modal-content">
+            <div class="flex items-center justify-between mb-5 border-b border-gray-800 pb-4">
+                <h3 id="modal-title" class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-circle-plus text-amber-400"></i> إضافة عملة جديدة
+                </h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-white transition-colors p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="currency-form" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                <input type="hidden" id="edit-index" value="-1">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">اسم العملة (مثال: دولار أمريكي)</label>
+                    <input type="text" id="currency-name" required placeholder="أدخل اسم العملة بالعربية" class="w-full px-4 py-2.5 bg-gray-900 border border-gray-700 rounded-xl text-gray-100 text-sm focus:outline-none focus:border-amber-500">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1.5">رمز العملة (مثال: USD)</label>
+                        <input type="text" id="currency-code" required placeholder="USD" class="w-full px-4 py-2.5 bg-gray-900 border border-gray-700 rounded-xl text-gray-100 uppercase text-sm font-mono focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1.5">أيقونة العلم (Emoji)</label>
+                        <input type="text" id="currency-flag" required placeholder="🇺🇸" class="w-full px-4 py-2.5 bg-gray-900 border border-gray-700 rounded-xl text-gray-100 text-center text-sm focus:outline-none focus:border-amber-500">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1.5">سعر الشراء</label>
+                        <input type="number" step="0.01" id="currency-buy" required placeholder="0.00" class="w-full px-4 py-2.5 bg-gray-900 border border-gray-700 rounded-xl text-gray-100 text-sm font-mono focus:outline-none focus:border-amber-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-300 mb-1.5">سعر المبيع</label>
+                        <input type="number" step="0.01" id="currency-sell" required placeholder="0.00" class="w-full px-4 py-2.5 bg-gray-900 border border-gray-700 rounded-xl text-gray-100 text-sm font-mono focus:outline-none focus:border-amber-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-300 mb-1.5">الاتجاه الحالي</label>
+                    <select id="currency-trend" class="w-full px-4 py-2.5 bg-gray-900 border border-gray-700 rounded-xl text-gray-100 text-sm focus:outline-none focus:border-amber-500">
+                        <option value="up">ارتفاع (صعود)</option>
+                        <option value="down">انخفاض (هبوط)</option>
+                        <option value="stable">استقرار (ثابت)</option>
+                    </select>
+                </div>
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-800">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-semibold transition-all">إلغاء</button>
+                    <button type="submit" class="px-6 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-darkBg text-sm font-bold transition-all shadow-lg shadow-amber-500/20">حفظ العملة</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT -->
+    <script>
+        const defaultCurrencies = [
+            { name: "دولار أمريكي", code: "USD", flag: "🇺🇸", buy: 15000.00, sell: 14900.00, trend: "up" },
+            { name: "يورو أوروبي", code: "EUR", flag: "🇪🇺", buy: 16250.50, sell: 16100.00, trend: "up" },
+            { name: "ريال سعودي", code: "SAR", flag: "🇸🇦", buy: 4000.00, sell: 3970.00, trend: "stable" },
+            { name: "درهم إماراتي", code: "AED", flag: "🇦🇪", buy: 4085.00, sell: 4050.00, trend: "up" },
+            { name: "دينار أردني", code: "JOD", flag: "🇯🇴", buy: 21150.00, sell: 21000.00, trend: "down" },
+            { name: "جنيه استرليني", code: "GBP", flag: "🇬🇧", buy: 19100.00, sell: 18900.00, trend: "up" },
+            { name: "ليرة تركية", code: "TRY", flag: "🇹🇷", buy: 440.00, sell: 430.00, trend: "down" },
+            { name: "دينار كويتي", code: "KWD", flag: "🇰🇼", buy: 49000.00, sell: 48600.00, trend: "stable" }
+        ];
+
+        let currencies = JSON.parse(localStorage.getItem('fajr_currencies')) || defaultCurrencies;
+        let companyName = localStorage.getItem('fajr_company_name') || "شركة الفجر للصرافة والتحويلات";
+        let isAdminMode = false;
+
+        window.onload = function() {
+            updateClock();
+            setInterval(updateClock, 1000);
+            document.getElementById('header-company-title').innerText = companyName;
+            document.getElementById('display-company-name').innerText = companyName;
+            document.getElementById('footer-company-name').innerText = companyName;
+            document.getElementById('footer-year').innerText = new Date().getFullYear();
+            renderTable();
+        };
+
+        function updateClock() {
+            const now = new Date();
+            // ضبط الأرقام باللغة الإنجليزية في الساعة والتاريخ
+            const timeString = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const dateString = now.toLocaleDateString('en-CA');
+            document.getElementById('live-clock').innerText = timeString;
+            document.getElementById('live-date').innerText = dateString;
+        }
+
+        function renderTable(filteredData = currencies) {
+            const tbody = document.getElementById('currencies-table-body');
+            const emptyState = document.getElementById('empty-state');
+            tbody.innerHTML = '';
+
+            if (filteredData.length === 0) {
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+                return;
+            } else {
+                emptyState.classList.remove('flex');
+                emptyState.classList.add('hidden');
+            }
+
+            filteredData.forEach((item, index) => {
+                const originalIndex = currencies.findIndex(c => c.code === item.code);
+                let trendIcon = '';
+                if (item.trend === 'up') {
+                    trendIcon = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold border border-emerald-500/20"><i class="fa-solid fa-arrow-trend-up"></i> ارتفاع</span>';
+                } else if (item.trend === 'down') {
+                    trendIcon = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/10 text-rose-400 text-xs font-semibold border border-rose-500/20"><i class="fa-solid fa-arrow-trend-down"></i> انخفاض</span>';
+                } else {
+                    trendIcon = '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-500/10 text-gray-400 text-xs font-semibold border border-gray-700"><i class="fa-solid fa-equals"></i> ثبات</span>';
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-800/40 transition-colors border-b border-gray-800/40 group";
+                tr.innerHTML = `
+                    <td class="py-4 px-6 flex items-center gap-3">
+                        <span class="text-2xl">${item.flag}</span>
+                        <div>
+                            <div class="font-bold text-white group-hover:text-amber-400 transition-colors">${item.name}</div>
+                            <div class="text-xs text-gray-500 sm:hidden">${item.code}</div>
+                        </div>
+                    </td>
+                    <td class="py-4 px-6 font-mono font-bold text-amber-400/90">${item.code}</td>
+                    <td class="py-4 px-6 font-mono font-semibold text-emerald-400 text-base">${Number(item.buy).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td class="py-4 px-6 font-mono font-semibold text-gray-200 text-base">${Number(item.sell).toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                    <td class="py-4 px-6">${trendIcon}</td>
+                    <td class="py-4 px-6 text-center admin-col ${isAdminMode ? '' : 'hidden'}">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="editCurrency(${originalIndex})" class="w-8 h-8 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white transition-all flex items-center justify-center" title="تعديل">
+                                <i class="fa-solid fa-pen text-xs"></i>
+                            </button>
+                            <button onclick="deleteCurrency(${originalIndex})" class="w-8 h-8 rounded-lg bg-rose-600/20 hover:bg-rose-600 text-rose-400 hover:text-white transition-all flex items-center justify-center" title="حذف">
+                                <i class="fa-solid fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // فتح نافذة كلمة المرور عند الضغط على وضع التعديل
+        function requestAdminAccess() {
+            if (isAdminMode) {
+                toggleAdminMode(false); // إذا كان مفعلاً، يتم إغلاقه مباشرة
+                return;
+            }
+            document.getElementById('auth-modal').classList.remove('hidden');
+            document.getElementById('admin-pass-input').value = '';
+            document.getElementById('admin-pass-input').focus();
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.add('hidden');
+        }
+
+        // التحقق من كلمة المرور 1234
+        function verifyAdminPassword() {
+            const pass = document.getElementById('admin-pass-input').value;
+            if (pass === "1234") {
+                closeAuthModal();
+                toggleAdminMode(true);
+                showToast("تم التحقق بنجاح، تم تفعيل وضع التعديل", "success");
+            } else {
+                showToast("كلمة المرور غير صحيحة!", "error");
+                document.getElementById('admin-pass-input').value = '';
+                document.getElementById('admin-pass-input').focus();
+            }
+        }
+
+        function toggleAdminMode(enable) {
+            isAdminMode = enable;
+            const btn = document.getElementById('admin-toggle-btn');
+            const icon = document.getElementById('admin-icon');
+            const text = document.getElementById('admin-toggle-text');
+            const addBtn = document.getElementById('add-currency-btn');
+            const editNameBtn = document.getElementById('edit-name-btn');
+            const adminCols = document.querySelectorAll('.admin-col');
+
+            if (isAdminMode) {
+                btn.className = "flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 text-darkBg transition-all text-sm font-bold shadow-lg shadow-amber-500/20 border border-amber-400";
+                icon.className = "fa-solid fa-check text-darkBg";
+                text.innerText = "إيقاف التعديل";
+                addBtn.classList.remove('hidden');
+                editNameBtn.classList.remove('hidden');
+                adminCols.forEach(col => col.classList.remove('hidden'));
+            } else {
+                btn.className = "flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 transition-all text-sm font-semibold border border-gray-700";
+                icon.className = "fa-solid fa-pen-to-square text-amber-400";
+                text.innerText = "وضع التعديل";
+                addBtn.classList.add('hidden');
+                editNameBtn.classList.add('hidden');
+                adminCols.forEach(col => col.classList.add('hidden'));
+            }
+            renderTable();
+        }
+
+        function filterCurrencies() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const filtered = currencies.filter(c => c.name.toLowerCase().includes(query) || c.code.toLowerCase().includes(query));
+            renderTable(filtered);
+        }
+
+        function manualRefresh() {
+            const icon = document.getElementById('refresh-icon');
+            icon.classList.add('animate-spin');
+            setTimeout(() => {
+                icon.classList.remove('animate-spin');
+                const now = new Date();
+                document.getElementById('last-update-time').innerText = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                showToast("تم تحديث الأسعار بنجاح", "success");
+            }, 800);
+        }
+
+        function openModal(editIndex = -1) {
+            const modal = document.getElementById('currency-modal');
+            const modalContent = document.getElementById('modal-content');
+            const modalTitle = document.getElementById('modal-title');
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 10);
+
+            if (editIndex > -1) {
+                modalTitle.innerHTML = '<i class="fa-solid fa-pen-to-square text-amber-400"></i> تعديل بيانات العملة';
+                document.getElementById('edit-index').value = editIndex;
+                document.getElementById('currency-name').value = currencies[editIndex].name;
+                document.getElementById('currency-code').value = currencies[editIndex].code;
+                document.getElementById('currency-flag').value = currencies[editIndex].flag;
+                document.getElementById('currency-buy').value = currencies[editIndex].buy;
+                document.getElementById('currency-sell').value = currencies[editIndex].sell;
+                document.getElementById('currency-trend').value = currencies[editIndex].trend;
+            } else {
+                modalTitle.innerHTML = '<i class="fa-solid fa-circle-plus text-amber-400"></i> إضافة عملة جديدة';
+                document.getElementById('currency-form').reset();
+                document.getElementById('edit-index').value = -1;
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('currency-modal');
+            const modalContent = document.getElementById('modal-content');
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => { modal.classList.add('hidden'); }, 200);
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const editIndex = parseInt(document.getElementById('edit-index').value);
+            const newCurrency = {
+                name: document.getElementById('currency-name').value.trim(),
+                code: document.getElementById('currency-code').value.trim().toUpperCase(),
+                flag: document.getElementById('currency-flag').value.trim(),
+                buy: parseFloat(document.getElementById('currency-buy').value),
+                sell: parseFloat(document.getElementById('currency-sell').value),
+                trend: document.getElementById('currency-trend').value
+            };
+
+            if (editIndex > -1) {
+                currencies[editIndex] = newCurrency;
+                showToast("تم تحديث العملة بنجاح", "success");
+            } else {
+                currencies.push(newCurrency);
+                showToast("تمت إضافة العملة بنجاح", "success");
+            }
+            saveData();
+            closeModal();
+            renderTable();
+        }
+
+        function editCurrency(index) { openModal(index); }
+
+        function deleteCurrency(index) {
+            if (confirm(`هل أنت متأكد من حذف عملة (${currencies[index].name})؟`)) {
+                currencies.splice(index, 1);
+                saveData();
+                renderTable();
+                showToast("تم حذف العملة بنجاح", "info");
+            }
+        }
+
+        function editCompanyName() {
+            const newName = prompt("أدخل اسم الشركة الجديد:", companyName);
+            if (newName && newName.trim() !== "") {
+                companyName = newName.trim();
+                localStorage.setItem('fajr_company_name', companyName);
+                document.getElementById('header-company-title').innerText = companyName;
+                document.getElementById('display-company-name').innerText = companyName;
+                document.getElementById('footer-company-name').innerText = companyName;
+                showToast("تم تحديث اسم الشركة بنجاح", "success");
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('fajr_currencies', JSON.stringify(currencies));
+            const now = new Date();
+            document.getElementById('last-update-time').innerText = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    alert(`خطأ في تفعيل وضع الشاشة الكاملة: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) { document.exitFullscreen(); }
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            let bgClass = "bg-emerald-600 text-white";
+            let icon = "fa-circle-check";
+            if (type === 'info') { bgClass = "bg-blue-600 text-white"; icon = "fa-circle-info"; }
+            else if (type === 'error') { bgClass = "bg-rose-600 text-white"; icon = "fa-triangle-exclamation"; }
+
+            toast.className = `${bgClass} px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 text-sm font-semibold transform translate-y-2 opacity-0 transition-all duration-300 border border-white/10`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-lg"></i><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.remove('translate-y-2', 'opacity-0'); }, 50);
+            setTimeout(() => {
+                toast.classList.add('translate-y-2', 'opacity-0');
+                setTimeout(() => { toast.remove(); }, 300);
+            }, 3500);
+        }
+    </script>
+</body>
+</html>
